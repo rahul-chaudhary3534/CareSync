@@ -1,0 +1,30 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+node_modules
+# Do not ignore the database if you want to ship the seeded hospitals!
+# But for production, you usually start fresh or use a migration.
+# caresync.db-journal
+# caresync.db-shm
+# caresync.db-wal
+
+# Build
+dist
+build
+
+# Environment variables
+.env
+.env.local
+
+# File uploads (highly recommended to persistent storage)
+uploads/*
+!uploads/.gitkeep
+
+# System files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CareSync — Hospitals</title>
+<link rel="stylesheet" href="/css/styles.css"/>
+<style>
+  .hospital-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+  .review-item { padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .review-item:last-child { border: none; }
+  .hospital-detail-header { background: linear-gradient(135deg, #0f172a, #1e3a5f, #0f766e); border-radius: var(--radius-lg); padding: 32px; color: #fff; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><div class="sidebar-logo-icon">🏥</div><div class="sidebar-logo-text">CareSync</div></div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Main Menu</div>
+      <a class="sidebar-item" href="dashboard.html"><span class="sidebar-item-icon">🏠</span>Dashboard</a>
+      <a class="sidebar-item" href="profile.html"><span class="sidebar-item-icon">👤</span>My Profile</a>
+      <a class="sidebar-item" href="history.html"><span class="sidebar-item-icon">📋</span>Medical History</a>
+      <a class="sidebar-item" href="appointments.html"><span class="sidebar-item-icon">🗓️</span>Appointments</a>
+      <div class="sidebar-section-label">More</div>
+      <a class="sidebar-item active" href="hospitals.html"><span class="sidebar-item-icon">🏩</span>Hospitals</a>
+      <a class="sidebar-item" href="insurance.html"><span class="sidebar-item-icon">📄</span>Certificates</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-user-avatar avatar" id="sidebar-user-avatar">P</div><div class="sidebar-user-info"><div class="sidebar-user-name" id="sidebar-user-name">Patient</div><div class="sidebar-user-role">Patient Portal</div></div></div>
+      <button class="btn btn-ghost btn-sm btn-full mt-2" onclick="api.logout()">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div><div class="page-title" id="page-h-title">Hospitals & Clinics</div><div class="page-subtitle" id="page-h-sub">Find hospitals, read reviews and share your experience</div></div>
+      <button class="btn btn-outline btn-sm hidden" id="back-btn" onclick="showList()">← Back to List</button>
+    </div>
+
+    <div class="page-body">
+      <!-- LIST VIEW -->
+      <div id="list-view">
+        <div style="margin-bottom:20px;">
+          <input class="form-input-light" id="search-hospitals" placeholder="🔍 Search hospitals by name or city..." oninput="filterHospitals()" style="max-width:400px;"/>
+        </div>
+        <div class="hospital-grid" id="hospital-grid">
+          <div class="empty-state"><div class="empty-icon">🏩</div><div class="empty-title">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- DETAIL VIEW -->
+      <div id="detail-view" class="hidden">
+        <div class="hospital-detail-header" id="hospital-header"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-title">ℹ️ Hospital Information</div></div>
+            <div class="card-body" id="hospital-info"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">⭐ Reviews & Ratings</div>
+              <button class="btn btn-primary btn-sm" onclick="openModal('review-modal')">Write Review</button>
+            </div>
+            <div class="card-body" id="hospital-reviews">
+              <div class="empty-state"><div class="empty-icon">⭐</div><div class="empty-title">No reviews yet</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Review Modal -->
+<div class="modal-overlay" id="review-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Write a Review</div>
+      <button class="modal-close" onclick="closeModal('review-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label form-label-dark">Your Rating</label>
+        <div id="star-input" style="font-size:32px;display:flex;gap:6px;cursor:pointer;">
+          <span class="star" data-v="1" onclick="setRating(1)">★</span>
+          <span class="star" data-v="2" onclick="setRating(2)">★</span>
+          <span class="star" data-v="3" onclick="setRating(3)">★</span>
+          <span class="star" data-v="4" onclick="setRating(4)">★</span>
+          <span class="star" data-v="5" onclick="setRating(5)">★</span>
+        </div>
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label form-label-dark">Your Review</label>
+        <textarea class="form-input-light" id="review-text" rows="4" placeholder="Share your experience at this hospital..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button class="btn btn-ghost" onclick="closeModal('review-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitReview()">Submit Review</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
+<script>
+const user = requireAuth('patient');
+let allHospitals = [];
+let currentHospitalId = null;
+let selectedRating = 0;
+
+if (user) { populateSidebarUser('patient'); loadHospitals(); }
+
+async function loadHospitals() {
+  try {
+    allHospitals = await api.hospitals.list();
+    renderHospitalGrid(allHospitals);
+  } catch(e) { showToast('Failed to load hospitals', 'error'); }
+}
+
+function renderHospitalGrid(hospitals) {
+  const grid = document.getElementById('hospital-grid');
+  if (!hospitals.length) { grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🏩</div><div class="empty-title">No hospitals found</div></div>'; return; }
+  grid.innerHTML = hospitals.map(h => `
+    <div class="hospital-card" onclick="showHospital('${h.id}')">
+      <div class="hospital-card-img">🏥</div>
+      <div class="hospital-card-body">
+        <div class="hospital-card-name">${h.name}</div>
+        <div class="hospital-card-city">📍 ${h.city}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">🏷️ ${h.specialty}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span style="color:var(--accent);font-size:16px;">★</span>
+            <span style="font-weight:700;font-size:14px;">${h.avg_rating}</span>
+            <span style="font-size:12px;color:var(--text-muted);">(${h.total_reviews})</span>
+          </div>
+          <span class="badge badge-teal">View →</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterHospitals() {
+  const q = document.getElementById('search-hospitals').value.toLowerCase();
+  renderHospitalGrid(allHospitals.filter(h => h.name.toLowerCase().includes(q) || h.city.toLowerCase().includes(q) || h.specialty.toLowerCase().includes(q)));
+}
+
+async function showHospital(id) {
+  currentHospitalId = id;
+  document.getElementById('list-view').classList.add('hidden');
+  document.getElementById('detail-view').classList.remove('hidden');
+  document.getElementById('back-btn').classList.remove('hidden');
+  try {
+    const h = await api.hospitals.get(id);
+    document.getElementById('page-h-title').textContent = h.name;
+    document.getElementById('page-h-sub').textContent = h.city + ' · ' + h.specialty;
+    document.getElementById('hospital-header').innerHTML = `
+      <div style="display:flex;align-items:center;gap:20px;">
+        <div style="font-size:56px;">🏥</div>
+        <div>
+          <h2 style="font-size:26px;font-weight:800;font-family:'Poppins',sans-serif;">${h.name}</h2>
+          <p style="color:rgba(255,255,255,0.6);margin-top:4px;">📍 ${h.address}, ${h.city}</p>
+          <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">
+            <span style="background:rgba(255,255,255,0.12);color:#fff;padding:4px 14px;border-radius:99px;font-size:13px;font-weight:600;">🏷️ ${h.specialty}</span>
+            <span style="background:rgba(255,255,255,0.12);color:#fff;padding:4px 14px;border-radius:99px;font-size:13px;font-weight:600;">★ ${h.avg_rating} · ${h.total_reviews} reviews</span>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('hospital-info').innerHTML = `
+      <div class="info-row" style="border-bottom:1px solid var(--border);padding:12px 0;display:flex;gap:12px;"><span style="width:100px;color:var(--text-muted);font-size:13px;">📞 Phone</span><span style="font-size:14px;">${h.phone||'—'}</span></div>
+      <div class="info-row" style="border-bottom:1px solid var(--border);padding:12px 0;display:flex;gap:12px;"><span style="width:100px;color:var(--text-muted);font-size:13px;">✉️ Email</span><span style="font-size:14px;">${h.email||'—'}</span></div>
+      <div style="padding:12px 0;display:flex;gap:12px;"><span style="width:100px;color:var(--text-muted);font-size:13px;">📍 Address</span><span style="font-size:14px;">${h.address}, ${h.city}</span></div>
+    `;
+    const reviewsEl = document.getElementById('hospital-reviews');
+    if (!h.reviews || !h.reviews.length) {
+      reviewsEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⭐</div><div class="empty-title">No reviews yet</div><div class="empty-text">Be the first to review!</div></div>';
+    } else {
+      reviewsEl.innerHTML = h.reviews.map(r => `
+        <div class="review-item">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-weight:600;font-size:14px;">${r.reviewer_name}</div>
+            <div>${'★'.repeat(r.rating)}<span style="color:#d1d5db">${'★'.repeat(5-r.rating)}</span></div>
+          </div>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:6px;">${r.review||''}</p>
+          <p style="font-size:11px;color:var(--text-light);margin-top:4px;">${formatDate(r.created_at)}</p>
+        </div>
+      `).join('');
+    }
+  } catch(e) { showToast('Failed to load hospital', 'error'); }
+}
+
+function showList() {
+  document.getElementById('list-view').classList.remove('hidden');
+  document.getElementById('detail-view').classList.add('hidden');
+  document.getElementById('back-btn').classList.add('hidden');
+  document.getElementById('page-h-title').textContent = 'Hospitals & Clinics';
+  document.getElementById('page-h-sub').textContent = 'Find hospitals, read reviews and share your experience';
+}
+
+function setRating(val) {
+  selectedRating = val;
+  document.querySelectorAll('#star-input .star').forEach((s, i) => {
+    s.style.color = i < val ? 'var(--accent)' : '#d1d5db';
+  });
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); selectedRating = 0; document.querySelectorAll('#star-input .star').forEach(s => s.style.color = '#d1d5db'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function submitReview() {
+  if (!selectedRating) { showToast('Please select a rating', 'error'); return; }
+  const review = document.getElementById('review-text').value;
+  try {
+    await api.hospitals.review(currentHospitalId, { rating: selectedRating, review });
+    showToast('Review submitted! Thank you.', 'success');
+    closeModal('review-modal');
+    showHospital(currentHospitalId);
+  } catch(e) { showToast(e.message, 'error'); }
+}
+</script>
+</body>
+</html>

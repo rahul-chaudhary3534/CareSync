@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CareSync — Patient Dashboard</title>
+<meta name="description" content="Monitor your health metrics and upcoming appointments on your CareSync patient dashboard."/>
+<link rel="stylesheet" href="/css/styles.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  .chart-card { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); padding: 24px; box-shadow: var(--shadow-sm); }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .upcoming-apt { background: var(--bg-card); border-radius: var(--radius); border-left: 4px solid var(--primary); padding: 16px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm); transition: var(--transition); }
+  .upcoming-apt:hover { transform: translateX(4px); box-shadow: var(--shadow); }
+  .quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .quick-action { background: var(--bg-card); border-radius: var(--radius); padding: 20px; text-align: center; border: 1px solid var(--border); cursor: pointer; transition: var(--transition); text-decoration: none; color: var(--text); }
+  .quick-action:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: var(--shadow); }
+  .quick-action-icon { font-size: 32px; margin-bottom: 8px; }
+  .quick-action-label { font-size: 13px; font-weight: 600; }
+  .add-metric-form { background: var(--bg-secondary); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">🏥</div>
+      <div class="sidebar-logo-text">CareSync</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Main Menu</div>
+      <a class="sidebar-item active" href="dashboard.html"><span class="sidebar-item-icon">🏠</span>Dashboard</a>
+      <a class="sidebar-item" href="profile.html"><span class="sidebar-item-icon">👤</span>My Profile</a>
+      <a class="sidebar-item" href="history.html"><span class="sidebar-item-icon">📋</span>Medical History</a>
+      <a class="sidebar-item" href="appointments.html"><span class="sidebar-item-icon">🗓️</span>Appointments</a>
+      <div class="sidebar-section-label">More</div>
+      <a class="sidebar-item" href="hospitals.html"><span class="sidebar-item-icon">🏩</span>Hospitals</a>
+      <a class="sidebar-item" href="insurance.html"><span class="sidebar-item-icon">📄</span>Certificates</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar avatar" id="sidebar-user-avatar">P</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-user-name">Patient</div>
+          <div class="sidebar-user-role">Patient Portal</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-full mt-2" onclick="api.logout()">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title" id="greeting">Good morning! 👋</div>
+        <div class="page-subtitle">Here's your health overview for today</div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('metric-form').classList.toggle('hidden')">➕ Log Health Data</button>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <!-- Add Metric Form -->
+      <div class="add-metric-form hidden" id="metric-form">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">📊 Log Today's Health Data</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;">
+          <div class="form-group" style="margin:0">
+            <label class="form-label-dark form-label">Date</label>
+            <input type="date" class="form-input-light" id="m-date"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label-dark form-label">BP Systolic</label>
+            <input type="number" class="form-input-light" id="m-sys" placeholder="e.g. 120"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label-dark form-label">BP Diastolic</label>
+            <input type="number" class="form-input-light" id="m-dia" placeholder="e.g. 80"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label-dark form-label">Blood Sugar (mg/dL)</label>
+            <input type="number" class="form-input-light" id="m-sugar" placeholder="e.g. 95"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label-dark form-label">Weight (kg)</label>
+            <input type="number" class="form-input-light" id="m-weight" placeholder="e.g. 70"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:14px;">
+          <button class="btn btn-primary btn-sm" onclick="addMetric()">Save Entry</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('metric-form').classList.add('hidden')">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon teal">❤️</div>
+          <div><div class="stat-value" id="stat-bp">—</div><div class="stat-label">Last BP Reading</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon amber">🩸</div>
+          <div><div class="stat-value" id="stat-sugar">—</div><div class="stat-label">Blood Sugar (mg/dL)</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">⚖️</div>
+          <div><div class="stat-value" id="stat-weight">—</div><div class="stat-label">Weight (kg)</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">🗓️</div>
+          <div><div class="stat-value" id="stat-apts">0</div><div class="stat-label">Upcoming Appointments</div></div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions" style="margin-bottom:28px;">
+        <a class="quick-action" href="appointments.html">
+          <div class="quick-action-icon">📅</div>
+          <div class="quick-action-label">Book Appointment</div>
+        </a>
+        <a class="quick-action" href="history.html">
+          <div class="quick-action-icon">📋</div>
+          <div class="quick-action-label">My Reports</div>
+        </a>
+        <a class="quick-action" href="hospitals.html">
+          <div class="quick-action-icon">🏩</div>
+          <div class="quick-action-label">Find Hospitals</div>
+        </a>
+        <a class="quick-action" href="insurance.html">
+          <div class="quick-action-icon">📄</div>
+          <div class="quick-action-label">Certificates</div>
+        </a>
+      </div>
+
+      <!-- Charts -->
+      <div class="grid-2 mb-6">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="card-title">Blood Pressure</div><div class="card-subtitle">Systolic / Diastolic trend</div></div>
+            <span class="badge badge-red">❤️ BP</span>
+          </div>
+          <div class="chart-container" style="height:220px;">
+            <canvas id="chart-bp"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="card-title">Blood Sugar & Weight</div><div class="card-subtitle">Glucose levels & body weight</div></div>
+            <span class="badge badge-amber">🩸 Glucose</span>
+          </div>
+          <div class="chart-container" style="height:220px;">
+            <canvas id="chart-sw"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metric History Table + Upcoming Appointments -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Health Log History</div>
+            <button class="btn btn-ghost btn-sm" onclick="loadMetrics()">↻</button>
+          </div>
+          <div class="card-body" style="padding-top:12px;">
+            <div id="metrics-list"><div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No logs yet</div><div class="empty-text">Add your first health entry above</div></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Upcoming Appointments</div>
+            <a href="appointments.html" class="btn btn-outline btn-sm">View All</a>
+          </div>
+          <div class="card-body" style="padding-top:12px;">
+            <div id="apt-list"><div class="empty-state"><div class="empty-icon">🗓️</div><div class="empty-title">No upcoming</div><div class="empty-text">Book an appointment now</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
+<script>
+const user = requireAuth('patient');
+if (user) {
+  populateSidebarUser('patient');
+  setActiveSidebarLink();
+  // Greeting
+  const h = new Date().getHours();
+  const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('greeting').textContent = greeting + ', ' + (user.email?.split('@')[0] || 'Patient') + '! 👋';
+  // Set today date default
+  document.getElementById('m-date').value = new Date().toISOString().split('T')[0];
+  loadMetrics(); loadAppointments();
+}
+
+let bpChart, swChart, metricsData = [];
+
+async function loadMetrics() {
+  try {
+    metricsData = await api.patient.getMetrics();
+    renderMetricStats(metricsData);
+    renderMetricList(metricsData);
+    renderCharts(metricsData);
+  } catch(e) { console.error(e); }
+}
+
+function renderMetricStats(data) {
+  if (!data.length) return;
+  const last = data[0];
+  document.getElementById('stat-bp').textContent = last.bp_systolic ? `${last.bp_systolic}/${last.bp_diastolic}` : '—';
+  document.getElementById('stat-sugar').textContent = last.blood_sugar || '—';
+  document.getElementById('stat-weight').textContent = last.weight || '—';
+}
+
+function renderMetricList(data) {
+  const el = document.getElementById('metrics-list');
+  if (!data.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No logs yet</div></div>'; return; }
+  el.innerHTML = data.slice(0,8).map(m => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:13px;font-weight:600;">${formatDate(m.date)}</div>
+        <div style="font-size:12px;color:var(--text-muted);">BP ${m.bp_systolic||'—'}/${m.bp_diastolic||'—'} · Sugar ${m.blood_sugar||'—'} · Wt ${m.weight||'—'}kg</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="deleteMetric('${m.id}')">🗑</button>
+    </div>
+  `).join('');
+}
+
+function renderCharts(data) {
+  const labels = [...data].reverse().map(m => m.date?.slice(5));
+  const systolic = [...data].reverse().map(m => m.bp_systolic);
+  const diastolic = [...data].reverse().map(m => m.bp_diastolic);
+  const sugar = [...data].reverse().map(m => m.blood_sugar);
+  const weight = [...data].reverse().map(m => m.weight);
+
+  if (bpChart) bpChart.destroy();
+  bpChart = new Chart(document.getElementById('chart-bp'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Systolic', data: systolic, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)', tension: 0.4, fill: true, pointBackgroundColor: '#ef4444' },
+        { label: 'Diastolic', data: diastolic, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.08)', tension: 0.4, fill: true, pointBackgroundColor: '#f59e0b' }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } }, scales: { y: { grid: { color: 'rgba(0,0,0,0.04)' } }, x: { grid: { display: false } } } }
+  });
+
+  if (swChart) swChart.destroy();
+  swChart = new Chart(document.getElementById('chart-sw'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Blood Sugar', data: sugar, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.08)', tension: 0.4, fill: true, yAxisID: 'y1' },
+        { label: 'Weight (kg)', data: weight, borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.08)', tension: 0.4, fill: true, yAxisID: 'y2' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } },
+      scales: {
+        y1: { type: 'linear', position: 'left', grid: { color: 'rgba(0,0,0,0.04)' } },
+        y2: { type: 'linear', position: 'right', grid: { display: false } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+async function addMetric() {
+  const data = {
+    date: document.getElementById('m-date').value,
+    bp_systolic: document.getElementById('m-sys').value || null,
+    bp_diastolic: document.getElementById('m-dia').value || null,
+    blood_sugar: document.getElementById('m-sugar').value || null,
+    weight: document.getElementById('m-weight').value || null
+  };
+  if (!data.date) { showToast('Please select a date', 'error'); return; }
+  try {
+    await api.patient.addMetric(data);
+    showToast('Health data logged!', 'success');
+    document.getElementById('metric-form').classList.add('hidden');
+    loadMetrics();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deleteMetric(id) {
+  if (!confirm('Remove this log?')) return;
+  await api.patient.deleteMetric(id);
+  loadMetrics();
+}
+
+async function loadAppointments() {
+  try {
+    const apts = (await api.patient.getAppointments()).filter(a => a.status === 'pending' || a.status === 'confirmed');
+    document.getElementById('stat-apts').textContent = apts.length;
+    const el = document.getElementById('apt-list');
+    if (!apts.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🗓️</div><div class="empty-title">No upcoming</div></div>'; return; }
+    el.innerHTML = apts.slice(0,5).map(a => `
+      <div class="upcoming-apt">
+        <div>
+          <div style="font-weight:600;font-size:14px;">Dr. ${a.doctor_name}</div>
+          <div style="font-size:12px;color:var(--text-muted);">${formatDate(a.appointment_date)} · ${a.appointment_time || ''}</div>
+          <div style="font-size:12px;color:var(--text-muted);">${a.hospital_name}</div>
+        </div>
+        ${statusBadge(a.status)}
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+</script>
+</body>
+</html>

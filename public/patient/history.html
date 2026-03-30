@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CareSync — Medical History</title>
+<link rel="stylesheet" href="/css/styles.css"/>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><div class="sidebar-logo-icon">🏥</div><div class="sidebar-logo-text">CareSync</div></div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Main Menu</div>
+      <a class="sidebar-item" href="dashboard.html"><span class="sidebar-item-icon">🏠</span>Dashboard</a>
+      <a class="sidebar-item" href="profile.html"><span class="sidebar-item-icon">👤</span>My Profile</a>
+      <a class="sidebar-item active" href="history.html"><span class="sidebar-item-icon">📋</span>Medical History</a>
+      <a class="sidebar-item" href="appointments.html"><span class="sidebar-item-icon">🗓️</span>Appointments</a>
+      <div class="sidebar-section-label">More</div>
+      <a class="sidebar-item" href="hospitals.html"><span class="sidebar-item-icon">🏩</span>Hospitals</a>
+      <a class="sidebar-item" href="insurance.html"><span class="sidebar-item-icon">📄</span>Certificates</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-user-avatar avatar" id="sidebar-user-avatar">P</div><div class="sidebar-user-info"><div class="sidebar-user-name" id="sidebar-user-name">Patient</div><div class="sidebar-user-role">Patient Portal</div></div></div>
+      <button class="btn btn-ghost btn-sm btn-full mt-2" onclick="api.logout()">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div><div class="page-title">Medical History</div><div class="page-subtitle">All your reports, prescriptions and test results</div></div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('add-modal')">➕ Add Report</button>
+    </div>
+
+    <div class="page-body">
+      <!-- Filters -->
+      <div class="card mb-6">
+        <div class="card-body" style="padding:16px 24px;">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+            <div class="form-group" style="margin:0;min-width:130px;">
+              <label class="form-label form-label-dark" style="font-size:12px;">Month</label>
+              <select class="form-input-light" id="f-month" onchange="loadReports()">
+                <option value="">All Months</option>
+                <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+                <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+                <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+                <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;min-width:110px;">
+              <label class="form-label form-label-dark" style="font-size:12px;">Year</label>
+              <select class="form-input-light" id="f-year" onchange="loadReports()">
+                <option value="">All Years</option>
+                <option>2026</option><option>2025</option><option>2024</option><option>2023</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;min-width:150px;">
+              <label class="form-label form-label-dark" style="font-size:12px;">Category</label>
+              <select class="form-input-light" id="f-category" onchange="loadReports()">
+                <option value="">All Categories</option>
+                <option>Prescription</option><option>Blood Test</option><option>Radiology</option>
+                <option>Vaccination</option><option>Discharge Summary</option><option>Other</option>
+              </select>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="clearFilters()">✕ Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report List -->
+      <div id="reports-container">
+        <div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Loading...</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Add Report Modal -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Medical Report</div>
+      <button class="modal-close" onclick="closeModal('add-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label form-label-dark">Report Title *</label><input class="form-input-light" id="r-title" placeholder="e.g. Blood Test Results"/></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label form-label-dark">Category</label>
+          <select class="form-input-light" id="r-category">
+            <option>Prescription</option><option>Blood Test</option><option>Radiology</option>
+            <option>Vaccination</option><option>Discharge Summary</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label form-label-dark">Report Date</label><input type="date" class="form-input-light" id="r-date"/></div>
+      </div>
+      <div class="form-group"><label class="form-label form-label-dark">Description / Notes</label><textarea class="form-input-light" id="r-desc" rows="3" placeholder="Any notes about this report..."></textarea></div>
+      <div class="form-group">
+        <label class="form-label form-label-dark">Attach File (PDF/Image)</label>
+        <div class="upload-zone" onclick="document.getElementById('r-file').click()" id="upload-zone">
+          <div class="upload-icon">📎</div>
+          <p class="upload-text"><strong>Click to upload</strong> or drag & drop</p>
+          <p class="upload-text" style="font-size:12px;margin-top:4px;">PDF, JPG, PNG up to 10MB</p>
+          <input type="file" id="r-file" style="display:none" accept=".pdf,.jpg,.jpeg,.png" onchange="fileSelected(this)"/>
+        </div>
+        <div id="file-preview" class="hidden" style="margin-top:8px;padding:10px;background:var(--primary-light);border-radius:8px;font-size:13px;color:var(--primary-dark);"></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-ghost" onclick="closeModal('add-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="addReport()">Save Report</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
+<script>
+const user = requireAuth('patient');
+if (user) { populateSidebarUser('patient'); loadReports(); }
+
+const catIcons = { Prescription:'💊', 'Blood Test':'🩸', Radiology:'🩻', Vaccination:'💉', 'Discharge Summary':'🏥', Other:'📄' };
+
+async function loadReports() {
+  const q = {};
+  const m = document.getElementById('f-month').value;
+  const y = document.getElementById('f-year').value;
+  const c = document.getElementById('f-category').value;
+  if (m) q.month = m;
+  if (y) q.year = y;
+  if (c) q.category = c;
+  try {
+    const reports = await api.patient.getReports(q);
+    const container = document.getElementById('reports-container');
+    if (!reports.length) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No reports found</div><div class="empty-text">Try adjusting the filters or add a new report</div></div>';
+      return;
+    }
+    container.innerHTML = reports.map(r => `
+      <div class="card mb-4" style="transition: var(--transition);">
+        <div class="card-body">
+          <div style="display:flex;gap:16px;align-items:flex-start;">
+            <div style="width:52px;height:52px;border-radius:12px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">${catIcons[r.category]||'📄'}</div>
+            <div style="flex:1;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+                <div>
+                  <div style="font-size:16px;font-weight:700;">${r.title}</div>
+                  <div style="font-size:13px;color:var(--text-muted);margin-top:3px;">${formatDate(r.report_date)} · By: ${r.doctor_name}</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <span class="badge badge-teal">${r.category}</span>
+                  <button class="btn btn-danger btn-sm" onclick="deleteReport('${r.id}')">🗑</button>
+                </div>
+              </div>
+              ${r.description ? `<p style="font-size:13px;color:var(--text-muted);margin-top:8px;">${r.description}</p>` : ''}
+              ${r.file_path ? `<a href="${r.file_path}" target="_blank" class="btn btn-outline btn-sm mt-3">📎 View ${r.file_name||'File'}</a>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { showToast('Failed to load reports', 'error'); }
+}
+
+function clearFilters() {
+  document.getElementById('f-month').value = '';
+  document.getElementById('f-year').value = '';
+  document.getElementById('f-category').value = '';
+  loadReports();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); document.getElementById('r-date').value = new Date().toISOString().split('T')[0]; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function fileSelected(input) {
+  if (!input.files[0]) return;
+  const preview = document.getElementById('file-preview');
+  preview.classList.remove('hidden');
+  preview.textContent = '📎 ' + input.files[0].name;
+}
+
+async function addReport() {
+  const title = document.getElementById('r-title').value;
+  if (!title) { showToast('Title is required', 'error'); return; }
+  const fd = new FormData();
+  fd.append('title', title);
+  fd.append('category', document.getElementById('r-category').value);
+  fd.append('report_date', document.getElementById('r-date').value);
+  fd.append('description', document.getElementById('r-desc').value);
+  const file = document.getElementById('r-file').files[0];
+  if (file) fd.append('file', file);
+  try {
+    await api.patient.addReport(fd);
+    showToast('Report added!', 'success');
+    closeModal('add-modal');
+    document.getElementById('r-title').value = '';
+    document.getElementById('r-desc').value = '';
+    document.getElementById('file-preview').classList.add('hidden');
+    loadReports();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deleteReport(id) {
+  if (!confirm('Delete this report?')) return;
+  await api.patient.deleteReport(id);
+  showToast('Report deleted', 'info');
+  loadReports();
+}
+</script>
+</body>
+</html>

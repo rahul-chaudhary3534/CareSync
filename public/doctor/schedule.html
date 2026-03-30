@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CareSync — Schedule & Consultations</title>
+<link rel="stylesheet" href="/css/styles.css"/>
+<style>
+  .schedule-day { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 16px; justify-content: space-between; }
+  .day-label { font-size: 15px; font-weight: 700; min-width: 100px; }
+  .time-slot { background: var(--primary-light); color: var(--primary-dark); border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><div class="sidebar-logo-icon">🏥</div><div class="sidebar-logo-text">CareSync</div></div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Main Menu</div>
+      <a class="sidebar-item" href="dashboard.html"><span class="sidebar-item-icon">🏠</span>Dashboard</a>
+      <a class="sidebar-item" href="profile.html"><span class="sidebar-item-icon">👨‍⚕️</span>My Profile</a>
+      <a class="sidebar-item" href="patients.html"><span class="sidebar-item-icon">👥</span>My Patients</a>
+      <a class="sidebar-item active" href="schedule.html"><span class="sidebar-item-icon">📅</span>Schedule</a>
+      <div class="sidebar-section-label">More</div>
+      <a class="sidebar-item" href="hospitals.html"><span class="sidebar-item-icon">🏩</span>Hospitals</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-user-avatar avatar" id="sidebar-user-avatar">D</div><div class="sidebar-user-info"><div class="sidebar-user-name" id="sidebar-user-name">Doctor</div><div class="sidebar-user-role">Doctor Portal</div></div></div>
+      <button class="btn btn-ghost btn-sm btn-full mt-2" onclick="api.logout()">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div><div class="page-title">Schedule & Consultations</div><div class="page-subtitle">Manage your availability and view all appointments</div></div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('sched-modal')">➕ Add Schedule</button>
+    </div>
+
+    <div class="page-body">
+      <div class="grid-2 gap-6">
+        <!-- Availability Schedule -->
+        <div>
+          <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">🗓️ My Weekly Availability</h3>
+          <div id="schedule-list">
+            <div class="empty-state"><div class="empty-icon">📅</div><div class="empty-title">No schedule set</div><div class="empty-text">Add your working hours</div></div>
+          </div>
+        </div>
+
+        <!-- Appointments -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="font-size:16px;font-weight:700;">📋 All Consultations</h3>
+            <select class="form-input-light" id="apt-filter" onchange="filterApts()" style="width:150px;">
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div id="apt-list">
+            <div class="empty-state"><div class="empty-icon">🗓️</div><div class="empty-title">No appointments</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Add Schedule Modal -->
+<div class="modal-overlay" id="sched-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Weekly Slot</div>
+      <button class="modal-close" onclick="closeModal('sched-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label form-label-dark">Day of Week *</label>
+        <select class="form-input-light" id="s-day">
+          <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+          <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
+        </select>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label form-label-dark">Start Time</label><input type="time" class="form-input-light" id="s-start" value="09:00"/></div>
+        <div class="form-group"><label class="form-label form-label-dark">End Time</label><input type="time" class="form-input-light" id="s-end" value="17:00"/></div>
+      </div>
+      <div class="form-group mb-0"><label class="form-label form-label-dark">Slot Duration (minutes)</label><input type="number" class="form-input-light" id="s-dur" value="30" min="15" max="120"/></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button class="btn btn-ghost" onclick="closeModal('sched-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="addSchedule()">Add Slot</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
+<script>
+const user = requireAuth('doctor');
+let allApts = [];
+
+if (user) { populateSidebarUser('doctor'); loadAll(); }
+
+const dayOrder = { Monday:0, Tuesday:1, Wednesday:2, Thursday:3, Friday:4, Saturday:5, Sunday:6 };
+
+async function loadAll() {
+  try {
+    const [schedule, apts] = await Promise.all([api.doctor.getSchedule(), api.doctor.getAppointments()]);
+    allApts = apts;
+    renderSchedule(schedule);
+    renderApts(apts);
+  } catch(e) { showToast('Failed to load','error'); }
+}
+
+function renderSchedule(slots) {
+  const el = document.getElementById('schedule-list');
+  if (!slots.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-title">No schedule set</div><div class="empty-text">Add your working hours so patients can book appointments</div></div>';
+    return;
+  }
+  const sorted = [...slots].sort((a,b) => (dayOrder[a.day_of_week]||0) - (dayOrder[b.day_of_week]||0));
+  el.innerHTML = sorted.map(s => `
+    <div class="schedule-day">
+      <div>
+        <div class="day-label">${s.day_of_week}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Every ${s.slot_duration} min slots</div>
+      </div>
+      <div class="time-slot">🕐 ${s.start_time} – ${s.end_time}</div>
+      <button class="btn btn-danger btn-sm" onclick="deleteSlot('${s.id}')">🗑</button>
+    </div>
+  `).join('');
+}
+
+function filterApts() {
+  const f = document.getElementById('apt-filter').value;
+  const filtered = f === 'all' ? allApts : allApts.filter(a => a.status === f);
+  renderApts(filtered);
+}
+
+function renderApts(apts) {
+  const el = document.getElementById('apt-list');
+  if (!apts.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🗓️</div><div class="empty-title">No appointments</div></div>';
+    return;
+  }
+  el.innerHTML = apts.map(a => `
+    <div class="appointment-card" style="margin-bottom:10px;">
+      <div class="appointment-date-badge">
+        <div class="appointment-date-day">${a.appointment_date ? new Date(a.appointment_date).getDate() : '?' }</div>
+        <div class="appointment-date-month">${a.appointment_date ? new Date(a.appointment_date).toLocaleString('en',{month:'short'}) : ''}</div>
+      </div>
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;">${a.patient_name}</div>
+            <div style="font-size:12px;color:var(--text-muted);">📞 ${a.patient_phone||'N/A'} · 🕐 ${a.appointment_time||'TBD'}</div>
+            ${a.reason ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;font-style:italic;">${a.reason}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-direction:column;align-items:flex-end;">
+            ${statusBadge(a.status)}
+            ${a.status==='pending' ? `
+              <div style="display:flex;gap:4px;">
+                <button class="btn btn-primary btn-sm" onclick="updateStatus('${a.id}','confirmed')">✓ Confirm</button>
+                <button class="btn btn-danger btn-sm" onclick="updateStatus('${a.id}','cancelled')">✕</button>
+              </div>` : ''}
+            ${a.status==='confirmed' ? `<button class="btn btn-outline btn-sm" onclick="updateStatus('${a.id}','completed')">✅ Done</button>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function addSchedule() {
+  const data = {
+    day_of_week: document.getElementById('s-day').value,
+    start_time: document.getElementById('s-start').value,
+    end_time: document.getElementById('s-end').value,
+    slot_duration: document.getElementById('s-dur').value
+  };
+  try {
+    await api.doctor.addSchedule(data);
+    showToast('Schedule added!', 'success');
+    closeModal('sched-modal');
+    loadAll();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+async function deleteSlot(id) {
+  if (!confirm('Remove this schedule slot?')) return;
+  await api.doctor.deleteSchedule(id);
+  showToast('Slot removed','info');
+  loadAll();
+}
+
+async function updateStatus(id, status) {
+  await api.doctor.updateAppointmentStatus(id, status);
+  showToast('Status updated!', 'success');
+  loadAll();
+}
+</script>
+</body>
+</html>

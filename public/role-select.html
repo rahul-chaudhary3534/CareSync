@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CareSync — Choose Your Role</title>
+<link rel="stylesheet" href="/css/styles.css"/>
+<style>
+  .role-select-wrap { max-width: 700px; width: 100%; text-align: center; }
+  .welcome-title { font-size: 38px; font-weight: 800; color: #fff; font-family: 'Poppins', sans-serif; margin-bottom: 8px; }
+  .welcome-sub { font-size: 16px; color: rgba(255,255,255,0.5); margin-bottom: 10px; }
+  .step-indicator { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+  .step { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+  .step.done { background: var(--primary); color: #fff; }
+  .step.active { background: rgba(255,255,255,0.15); color: #fff; border: 2px solid var(--primary); }
+  .step-line { width: 40px; height: 2px; background: rgba(255,255,255,0.15); }
+</style>
+</head>
+<body>
+<div class="role-select-page">
+  <div class="role-select-wrap">
+    <div class="step-indicator">
+      <div class="step done">✓</div>
+      <div class="step-line"></div>
+      <div class="step active">2</div>
+      <div class="step-line"></div>
+      <div class="step" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.3);">3</div>
+    </div>
+
+    <div class="auth-logo" style="justify-content:center;margin-bottom:28px;">
+      <div class="auth-logo-icon">🏥</div>
+      <div><div class="auth-logo-text">CareSync</div><div class="auth-logo-sub">Healthcare Platform</div></div>
+    </div>
+
+    <div class="welcome-title">Who are you?</div>
+    <div class="welcome-sub">Choose your role to get started. This helps us personalize your experience.</div>
+
+    <div class="role-cards">
+      <div class="role-card" onclick="selectRole('patient')" id="card-patient">
+        <div class="role-icon">🧑‍⚕️</div>
+        <div class="role-title">I'm a Patient</div>
+        <div class="role-desc">Book appointments, track health metrics, manage medical records, insurance, and vaccination certificates.</div>
+        <div style="margin-top:24px;">
+          <span style="background:rgba(13,148,136,0.2);color:#2dd4bf;padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;">Get Started →</span>
+        </div>
+      </div>
+
+      <div class="role-card" onclick="selectRole('doctor')" id="card-doctor">
+        <div class="role-icon">👨‍⚕️</div>
+        <div class="role-title">I'm a Doctor</div>
+        <div class="role-desc">Manage patients, upload prescriptions & reports, set your schedule, and receive appointment bookings.</div>
+        <div style="margin-top:24px;">
+          <span style="background:rgba(99,102,241,0.2);color:#a5b4fc;padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;">Get Started →</span>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:28px;font-size:13px;color:rgba(255,255,255,0.25);">You can only set this once. Choose carefully.</p>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+function getApiUser() {
+  const token = localStorage.getItem('cs_token');
+  if (!token) return null;
+  try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
+}
+
+const user = getApiUser();
+if (!user) window.location.href = '/';
+if (user && user.role) {
+  window.location.href = user.role === 'doctor' ? '/doctor/dashboard.html' : '/patient/dashboard.html';
+}
+
+async function selectRole(role) {
+  const card = document.getElementById('card-' + role);
+  card.style.opacity = '0.7';
+  try {
+    const userId = user.id;
+    const res = await api.auth.setRole(userId, role);
+    localStorage.setItem('cs_token', res.token);
+    window.location.href = role === 'doctor' ? '/doctor/dashboard.html' : '/patient/dashboard.html';
+  } catch(e) {
+    alert('Error: ' + e.message);
+    card.style.opacity = '1';
+  }
+}
+</script>
+</body>
+</html>

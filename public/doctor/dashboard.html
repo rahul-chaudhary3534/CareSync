@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CareSync — Doctor Dashboard</title>
+<link rel="stylesheet" href="/css/styles.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><div class="sidebar-logo-icon">🏥</div><div class="sidebar-logo-text">CareSync</div></div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Main Menu</div>
+      <a class="sidebar-item active" href="dashboard.html"><span class="sidebar-item-icon">🏠</span>Dashboard</a>
+      <a class="sidebar-item" href="profile.html"><span class="sidebar-item-icon">👨‍⚕️</span>My Profile</a>
+      <a class="sidebar-item" href="patients.html"><span class="sidebar-item-icon">👥</span>My Patients</a>
+      <a class="sidebar-item" href="schedule.html"><span class="sidebar-item-icon">📅</span>Schedule</a>
+      <div class="sidebar-section-label">More</div>
+      <a class="sidebar-item" href="hospitals.html"><span class="sidebar-item-icon">🏩</span>Hospitals</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-user-avatar avatar" id="sidebar-user-avatar">D</div><div class="sidebar-user-info"><div class="sidebar-user-name" id="sidebar-user-name">Doctor</div><div class="sidebar-user-role">Doctor Portal</div></div></div>
+      <button class="btn btn-ghost btn-sm btn-full mt-2" onclick="api.logout()">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div><div class="page-title" id="greeting">Good morning, Doctor! 👋</div><div class="page-subtitle">Here's your practice overview for today</div></div>
+    </div>
+
+    <div class="page-body">
+      <!-- Stats -->
+      <div class="stats-grid mb-6">
+        <div class="stat-card"><div class="stat-icon teal">👥</div><div><div class="stat-value" id="stat-patients">0</div><div class="stat-label">Total Patients</div></div></div>
+        <div class="stat-card"><div class="stat-icon purple">🗓️</div><div><div class="stat-value" id="stat-pending">0</div><div class="stat-label">Pending Appointments</div></div></div>
+        <div class="stat-card"><div class="stat-icon amber">⭐</div><div><div class="stat-value" id="stat-rating">—</div><div class="stat-label">Avg Rating</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value" id="stat-completed">0</div><div class="stat-label">Completed Today</div></div></div>
+      </div>
+
+      <!-- Appointment timeline + chart -->
+      <div class="grid-2 mb-6">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Today's Appointments</div><a href="schedule.html" class="btn btn-outline btn-sm">View All</a></div>
+          <div class="card-body" id="today-apts">
+            <div class="empty-state" style="padding:30px;"><div class="empty-icon" style="font-size:36px;">🗓️</div><div class="empty-title">No appointments today</div></div>
+          </div>
+        </div>
+        <div style="background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border);padding:24px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div><div class="card-title">Appointment Trends</div><div class="card-subtitle">Weekly overview</div></div>
+          </div>
+          <canvas id="apt-chart" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Recent Patients -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Recent Patients</div><a href="patients.html" class="btn btn-outline btn-sm">View All</a></div>
+        <div class="card-body" style="padding:0;">
+          <div id="recent-patients">
+            <div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No patients yet</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
+<script>
+const user = requireAuth('doctor');
+if (user) { populateSidebarUser('doctor'); loadData(); }
+
+const h = new Date().getHours();
+if(document.getElementById('greeting')) {
+  const g = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  document.getElementById('greeting').textContent = g + ', Doctor! 👋';
+}
+
+async function loadData() {
+  try {
+    const [profile, apts, patients] = await Promise.all([
+      api.doctor.getProfile(),
+      api.doctor.getAppointments(),
+      api.doctor.getPatients()
+    ]);
+
+    document.getElementById('stat-patients').textContent = patients.length;
+    document.getElementById('stat-rating').textContent = profile.avg_rating ? '★ ' + profile.avg_rating : '—';
+    const pending = apts.filter(a => a.status === 'pending').length;
+    const completed = apts.filter(a => a.status === 'completed').length;
+    document.getElementById('stat-pending').textContent = pending;
+    document.getElementById('stat-completed').textContent = completed;
+
+    // Today's appointments
+    const today = new Date().toISOString().split('T')[0];
+    const todayApts = apts.filter(a => a.appointment_date === today);
+    const aptEl = document.getElementById('today-apts');
+    if (!todayApts.length) {
+      aptEl.innerHTML = '<div class="empty-state" style="padding:30px;"><div class="empty-icon" style="font-size:36px;">🗓️</div><div class="empty-title">No appointments today</div></div>';
+    } else {
+      aptEl.innerHTML = todayApts.map(a => `
+        <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--primary-dark);flex-shrink:0;">${(a.patient_name||'?').charAt(0).toUpperCase()}</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600;">${a.patient_name}</div>
+            <div style="font-size:12px;color:var(--text-muted);">🕐 ${a.appointment_time||'TBD'} · ${a.reason||'General Consultation'}</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            ${statusBadge(a.status)}
+            ${a.status==='pending'||a.status==='confirmed' ? `<button class="btn btn-primary btn-sm" onclick="markComplete('${a.id}')">Done</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Recent patients
+    const pEl = document.getElementById('recent-patients');
+    if (!patients.length) {
+      pEl.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No patients yet</div></div>';
+    } else {
+      pEl.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Patient</th><th>Phone</th><th>Blood Group</th><th>Reports</th><th>Actions</th></tr></thead><tbody>` +
+        patients.slice(0,8).map(p => `<tr>
+          <td><div style="font-weight:600">${p.name||'—'}</div><div style="font-size:12px;color:var(--text-muted)">${p.email}</div></td>
+          <td>${p.phone||'—'}</td>
+          <td>${p.blood_group ? `<span class="badge badge-red">${p.blood_group}</span>` : '—'}</td>
+          <td><span class="badge badge-teal">${p.report_count} reports</span></td>
+          <td><a href="patients.html?id=${p.user_id}" class="btn btn-outline btn-sm">View</a></td>
+        </tr>`).join('') + '</tbody></table></div>';
+    }
+
+    // Chart
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const counts = days.map(() => Math.floor(Math.random() * 8 + 2));
+    new Chart(document.getElementById('apt-chart'), {
+      type: 'bar',
+      data: { labels: days, datasets: [{ label: 'Appointments', data: counts, backgroundColor: 'rgba(13,148,136,0.7)', borderRadius: 8, borderSkipped: false }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' } }, x: { grid: { display: false } } } }
+    });
+  } catch(e) { console.error(e); }
+}
+
+async function markComplete(id) {
+  await api.doctor.updateAppointmentStatus(id, 'completed');
+  showToast('Marked as completed', 'success');
+  loadData();
+}
+</script>
+</body>
+</html>

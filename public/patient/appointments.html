@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CareSync — Appointments</title>
+<link rel="stylesheet" href="/css/styles.css"/>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><div class="sidebar-logo-icon">🏥</div><div class="sidebar-logo-text">CareSync</div></div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Main Menu</div>
+      <a class="sidebar-item" href="dashboard.html"><span class="sidebar-item-icon">🏠</span>Dashboard</a>
+      <a class="sidebar-item" href="profile.html"><span class="sidebar-item-icon">👤</span>My Profile</a>
+      <a class="sidebar-item" href="history.html"><span class="sidebar-item-icon">📋</span>Medical History</a>
+      <a class="sidebar-item active" href="appointments.html"><span class="sidebar-item-icon">🗓️</span>Appointments</a>
+      <div class="sidebar-section-label">More</div>
+      <a class="sidebar-item" href="hospitals.html"><span class="sidebar-item-icon">🏩</span>Hospitals</a>
+      <a class="sidebar-item" href="insurance.html"><span class="sidebar-item-icon">📄</span>Certificates</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-user-avatar avatar" id="sidebar-user-avatar">P</div><div class="sidebar-user-info"><div class="sidebar-user-name" id="sidebar-user-name">Patient</div><div class="sidebar-user-role">Patient Portal</div></div></div>
+      <button class="btn btn-ghost btn-sm btn-full mt-2" onclick="api.logout()">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div><div class="page-title">Appointments</div><div class="page-subtitle">Book, track and review your doctor appointments</div></div>
+      <button class="btn btn-primary btn-sm" onclick="openBookModal()">📅 Book Appointment</button>
+    </div>
+
+    <div class="page-body">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="filterStatus('all',this)">All</button>
+        <button class="tab-btn" onclick="filterStatus('pending',this)">⏳ Pending</button>
+        <button class="tab-btn" onclick="filterStatus('confirmed',this)">✅ Confirmed</button>
+        <button class="tab-btn" onclick="filterStatus('completed',this)">🏁 Completed</button>
+        <button class="tab-btn" onclick="filterStatus('cancelled',this)">❌ Cancelled</button>
+      </div>
+
+      <div id="apt-list">
+        <div class="empty-state"><div class="empty-icon">🗓️</div><div class="empty-title">Loading...</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Book Modal -->
+<div class="modal-overlay" id="book-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📅 Book Appointment</div>
+      <button class="modal-close" onclick="closeModal('book-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label form-label-dark">Select Hospital *</label>
+        <select class="form-input-light" id="b-hospital" onchange="loadDoctorsForHospital()">
+          <option value="">Choose a hospital...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label form-label-dark">Select Doctor *</label>
+        <select class="form-input-light" id="b-doctor"><option value="">Choose a doctor...</option></select>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label form-label-dark">Date *</label><input type="date" class="form-input-light" id="b-date"/></div>
+        <div class="form-group"><label class="form-label form-label-dark">Time *</label><input type="time" class="form-input-light" id="b-time"/></div>
+      </div>
+      <div class="form-group mb-0"><label class="form-label form-label-dark">Reason for Visit</label><textarea class="form-input-light" id="b-reason" rows="3" placeholder="Describe your symptoms or reason for the visit..."></textarea></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button class="btn btn-ghost" onclick="closeModal('book-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="bookAppointment()">Confirm Booking</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Review Modal -->
+<div class="modal-overlay" id="review-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⭐ Review Your Doctor</div>
+      <button class="modal-close" onclick="closeModal('review-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px;">How was your experience with <strong id="review-doctor-name"></strong>?</p>
+      <div class="form-group">
+        <label class="form-label form-label-dark">Rating</label>
+        <div id="review-stars" style="font-size:36px;display:flex;gap:8px;cursor:pointer;">
+          <span onclick="setRevRating(1)">★</span><span onclick="setRevRating(2)">★</span>
+          <span onclick="setRevRating(3)">★</span><span onclick="setRevRating(4)">★</span><span onclick="setRevRating(5)">★</span>
+        </div>
+      </div>
+      <div class="form-group mb-0"><label class="form-label form-label-dark">Your Review</label><textarea class="form-input-light" id="review-text" rows="3" placeholder="Share your experience..."></textarea></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button class="btn btn-ghost" onclick="closeModal('review-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitReview()">Submit Review</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
+<script>
+const user = requireAuth('patient');
+let allApts = [], allDoctors = [], allHospitals = [];
+let currentFilter = 'all';
+let reviewAptId = null, reviewRating = 0;
+
+if (user) { populateSidebarUser('patient'); loadAll(); }
+
+async function loadAll() {
+  try {
+    [allApts, allDoctors, allHospitals] = await Promise.all([
+      api.patient.getAppointments(),
+      api.patient.getDoctors(),
+      api.hospitals.list()
+    ]);
+    renderApts(allApts);
+    populateHospitals();
+  } catch(e) { showToast('Failed to load', 'error'); }
+}
+
+function populateHospitals() {
+  const sel = document.getElementById('b-hospital');
+  sel.innerHTML = '<option value="">Choose a hospital...</option>' + allHospitals.map(h => `<option value="${h.id}">${h.name} — ${h.city}</option>`).join('');
+}
+
+function loadDoctorsForHospital() {
+  const sel = document.getElementById('b-doctor');
+  const docs = allDoctors.filter(d => !document.getElementById('b-hospital').value || (d.hospital && d.hospital.includes('Apollo')));
+  sel.innerHTML = '<option value="">Choose a doctor...</option>' + allDoctors.map(d => `<option value="${d.user_id}">${d.name} — ${d.specialization||'General'}</option>`).join('');
+}
+
+function filterStatus(status, btn) {
+  currentFilter = status;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = status === 'all' ? allApts : allApts.filter(a => a.status === status);
+  renderApts(filtered);
+}
+
+function renderApts(apts) {
+  const el = document.getElementById('apt-list');
+  if (!apts.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🗓️</div><div class="empty-title">No appointments</div><div class="empty-text">Book your first appointment with a doctor</div></div>';
+    return;
+  }
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  el.innerHTML = apts.map(a => {
+    const d = a.appointment_date ? new Date(a.appointment_date) : null;
+    const dayNum = d ? d.getDate() : '—';
+    const mon = d ? months[d.getMonth()] : '';
+    return `
+      <div class="appointment-card">
+        <div class="appointment-date-badge">
+          <div class="appointment-date-day">${dayNum}</div>
+          <div class="appointment-date-month">${mon}</div>
+        </div>
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-size:16px;font-weight:700;">Dr. ${a.doctor_name}</div>
+              <div style="font-size:13px;color:var(--text-muted);">🏩 ${a.hospital_name}</div>
+              <div style="font-size:13px;color:var(--text-muted);">🕐 ${a.appointment_time||'Time TBD'}</div>
+              ${a.reason ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px;font-style:italic;">${a.reason}</div>` : ''}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+              ${statusBadge(a.status)}
+              ${a.status === 'completed' && !a.doctor_rating ? `<button class="btn btn-outline btn-sm" onclick="openReviewModal('${a.id}','${a.doctor_name}')">⭐ Review</button>` : ''}
+              ${a.doctor_rating ? `<div style="color:var(--accent);font-size:14px;">${'★'.repeat(a.doctor_rating)}</div>` : ''}
+              ${(a.status === 'pending' || a.status === 'confirmed') ? `<button class="btn btn-danger btn-sm" onclick="cancelApt('${a.id}')">Cancel</button>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openBookModal() {
+  document.getElementById('book-modal').classList.add('open');
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('b-date').min = today;
+  document.getElementById('b-date').value = today;
+  loadDoctorsForHospital();
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function bookAppointment() {
+  const doctor_id = document.getElementById('b-doctor').value;
+  const hospital_id = document.getElementById('b-hospital').value;
+  const appointment_date = document.getElementById('b-date').value;
+  const appointment_time = document.getElementById('b-time').value;
+  if (!doctor_id || !appointment_date) { showToast('Please select doctor and date', 'error'); return; }
+  try {
+    await api.patient.bookAppointment({ doctor_id, hospital_id, appointment_date, appointment_time, reason: document.getElementById('b-reason').value });
+    showToast('Appointment booked!', 'success');
+    closeModal('book-modal');
+    loadAll();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function openReviewModal(aptId, doctorName) {
+  reviewAptId = aptId; reviewRating = 0;
+  document.getElementById('review-doctor-name').textContent = doctorName;
+  document.querySelectorAll('#review-stars span').forEach(s => s.style.color = '#d1d5db');
+  document.getElementById('review-text').value = '';
+  document.getElementById('review-modal').classList.add('open');
+}
+
+function setRevRating(val) {
+  reviewRating = val;
+  document.querySelectorAll('#review-stars span').forEach((s, i) => s.style.color = i < val ? 'var(--accent)' : '#d1d5db');
+}
+
+async function submitReview() {
+  if (!reviewRating) { showToast('Please select a rating', 'error'); return; }
+  try {
+    await api.patient.reviewAppointment(reviewAptId, { rating: reviewRating, review: document.getElementById('review-text').value });
+    showToast('Review submitted! Thank you.', 'success');
+    closeModal('review-modal');
+    loadAll();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function cancelApt(id) {
+  if (!confirm('Cancel this appointment?')) return;
+  await api.patient.cancelAppointment(id);
+  showToast('Appointment cancelled', 'info');
+  loadAll();
+}
+</script>
+</body>
+</html>
