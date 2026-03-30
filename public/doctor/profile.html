@@ -38,17 +38,19 @@
     <div class="page-body">
       <!-- Hero -->
       <div class="profile-hero mb-6">
-        <label class="avatar-upload" style="position:relative;display:inline-block;cursor:pointer;">
-          <div class="avatar avatar-xl" id="avatar-display">D</div>
-          <div class="avatar-overlay" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:var(--transition);font-size:22px;">📷</div>
-          <input type="file" id="avatar-input" style="display:none" accept="image/*" onchange="previewAvatar(this)"/>
-        </label>
-        <div class="profile-hero-info">
-          <h1 id="hero-name">Loading...</h1>
-          <p id="hero-spec" style="color:rgba(255,255,255,0.6);">Specialization</p>
-          <div class="flex gap-3 mt-3">
-            <span id="hero-rating" class="badge badge-teal">⭐ —</span>
-            <span id="hero-exp" class="badge badge-purple">— yrs experience</span>
+        <div class="profile-hero-content">
+          <label class="avatar-upload" style="position:relative;display:inline-block;cursor:pointer;">
+            <div class="avatar avatar-xl" id="avatar-display">D</div>
+            <div class="avatar-overlay" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:var(--transition);font-size:22px;">📷</div>
+            <input type="file" id="avatar-input" style="display:none" accept="image/*" onchange="previewAvatar(this)"/>
+          </label>
+          <div class="profile-hero-info">
+            <h1 id="hero-name">Loading...</h1>
+            <p id="hero-spec" style="color:rgba(255,255,255,0.6);">Specialization</p>
+            <div class="flex gap-3 mt-3">
+              <span id="hero-rating" class="badge badge-teal">⭐ —</span>
+              <span id="hero-exp" class="badge badge-purple">— yrs experience</span>
+            </div>
           </div>
         </div>
       </div>

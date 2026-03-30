@@ -82,6 +82,56 @@ function renderStars(rating, interactive = false, onRate) {
   return html;
 }
 
+// Mobile Menu Helper
+function initMobileMenu() {
+  const sidebar = document.querySelector('.sidebar');
+  const main = document.querySelector('.main-content');
+  if (!sidebar || !main) return;
+
+  // Create Mobile Header if not exists
+  if (!document.querySelector('.mobile-header')) {
+    const mobileHeader = document.createElement('div');
+    mobileHeader.className = 'mobile-header';
+    mobileHeader.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="sidebar-logo-icon" style="width:32px;height:32px;font-size:14px;">🏥</div>
+        <div class="sidebar-logo-text" style="font-size:16px;">CareSync</div>
+      </div>
+      <button class="menu-toggle" id="mobile-menu-btn">☰</button>
+    `;
+    main.parentNode.insertBefore(mobileHeader, main);
+  }
+
+  // Create Overlay if not exists
+  if (!document.querySelector('.sidebar-overlay')) {
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+
+    const toggle = () => {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+    };
+
+    document.getElementById('mobile-menu-btn')?.addEventListener('click', toggle);
+    overlay.addEventListener('click', toggle);
+
+    // Close on link click
+    sidebar.querySelectorAll('.sidebar-item').forEach(link => {
+      link.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+    });
+  }
+}
+
+// Run on load
+document.addEventListener('DOMContentLoaded', () => {
+  setActiveSidebarLink();
+  initMobileMenu();
+});
+
 window.showToast = showToast;
 window.requireAuth = requireAuth;
 window.setActiveSidebarLink = setActiveSidebarLink;
@@ -89,3 +139,4 @@ window.populateSidebarUser = populateSidebarUser;
 window.formatDate = formatDate;
 window.statusBadge = statusBadge;
 window.renderStars = renderStars;
+window.initMobileMenu = initMobileMenu;

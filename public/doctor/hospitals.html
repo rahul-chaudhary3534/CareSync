@@ -145,12 +145,12 @@ async function showHospital(id) {
     document.getElementById('page-sub').textContent = h.city + ' · ' + h.specialty;
 
     document.getElementById('hospital-header').innerHTML = `
-      <div style="display:flex;align-items:center;gap:20px;">
+      <div class="hospital-header-content">
         <div style="font-size:56px;">🏥</div>
         <div>
           <h2 style="font-size:26px;font-weight:800;font-family:'Poppins',sans-serif;">${h.name}</h2>
           <p style="color:rgba(255,255,255,0.6);margin-top:4px;">📍 ${h.address}, ${h.city}</p>
-          <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">
+          <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;justify-content:inherit;">
             <span style="background:rgba(255,255,255,0.12);color:#fff;padding:4px 14px;border-radius:99px;font-size:13px;font-weight:600;">🏷️ ${h.specialty}</span>
             <span style="background:rgba(245,158,11,0.25);color:#fcd34d;padding:4px 14px;border-radius:99px;font-size:13px;font-weight:600;">★ ${h.avg_rating} · ${h.total_reviews} reviews</span>
           </div>

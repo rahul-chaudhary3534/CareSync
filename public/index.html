@@ -22,6 +22,25 @@
   .feature-icon { font-size: 28px; margin-bottom: 8px; }
   .feature-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
   .feature-text { font-size: 12px; color: rgba(255,255,255,0.45); }
+  
+  .landing-container { display: flex; gap: 60px; align-items: center; max-width: 1100px; width: 100%; position: relative; z-index: 1; }
+  .branding-panel { flex: 1; display: none; }
+  .landing-title { font-size: 36px; font-weight: 800; color: #fff; font-family: 'Poppins', sans-serif; line-height: 1.2; margin-bottom: 16px; }
+  .landing-subtitle { color: rgba(255,255,255,0.5); font-size: 15px; line-height: 1.8; margin-bottom: 40px; }
+  .auth-card-wrap { margin: 0 auto; width: 100%; max-width: 460px; }
+
+  @media (max-width: 1024px) {
+    .landing-container { gap: 40px; padding: 0 20px; }
+    .landing-title { font-size: 32px; }
+  }
+  @media (max-width: 900px) {
+    .branding-panel { display: none !important; }
+    .landing-container { justify-content: center; }
+  }
+  @media (max-width: 640px) {
+    .features { grid-template-columns: 1fr; }
+    .landing-title { font-size: 28px; }
+  }
 </style>
 </head>
 <body>
@@ -32,15 +51,15 @@
     <div class="shape shape-3"></div>
   </div>
 
-  <div style="display:flex;gap:60px;align-items:center;max-width:1000px;width:100%;position:relative;z-index:1;">
+  <div class="landing-container">
     <!-- Left Branding -->
-    <div style="flex:1;display:none;" id="left-panel">
+    <div class="branding-panel" id="left-panel">
       <div class="auth-logo" style="margin-bottom:24px;">
         <div class="auth-logo-icon">🏥</div>
         <div><div class="auth-logo-text">CareSync</div><div class="auth-logo-sub">Healthcare Platform</div></div>
       </div>
-      <h1 style="font-size:36px;font-weight:800;color:#fff;font-family:'Poppins',sans-serif;line-height:1.2;margin-bottom:16px;">Your health journey <span style="color:#2dd4bf;">starts here</span></h1>
-      <p style="color:rgba(255,255,255,0.5);font-size:15px;line-height:1.8;margin-bottom:40px;">Connect with top doctors, track your health metrics, manage appointments and medical records — all in one beautiful platform.</p>
+      <h1 class="landing-title">Your health journey <span style="color:#2dd4bf;">starts here</span></h1>
+      <p class="landing-subtitle">Connect with top doctors, track your health metrics, manage appointments and medical records — all in one beautiful platform.</p>
       <div class="features">
         <div class="feature"><div class="feature-icon">📊</div><div class="feature-title">Health Tracking</div><div class="feature-text">Monitor BP, sugar & weight over time</div></div>
         <div class="feature"><div class="feature-icon">🗓️</div><div class="feature-title">Easy Booking</div><div class="feature-text">Book appointments at top hospitals</div></div>
@@ -50,67 +69,69 @@
     </div>
 
     <!-- Auth Card -->
-    <div class="auth-card" style="margin:0 auto;">
-      <div class="auth-logo">
-        <div class="auth-logo-icon">🏥</div>
-        <div><div class="auth-logo-text">CareSync</div><div class="auth-logo-sub">Healthcare Platform</div></div>
-      </div>
+    <div class="auth-card-wrap">
+      <div class="auth-card">
+        <div class="auth-logo">
+          <div class="auth-logo-icon">🏥</div>
+          <div><div class="auth-logo-text">CareSync</div><div class="auth-logo-sub">Healthcare Platform</div></div>
+        </div>
 
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
-        <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Create Account</button>
-      </div>
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+          <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Create Account</button>
+        </div>
 
-      <!-- LOGIN -->
-      <div class="form-section active" id="section-login">
-        <div class="auth-title">Welcome back!</div>
-        <div class="auth-subtitle">Sign in to your CareSync account</div>
-        <form id="login-form" onsubmit="handleLogin(event)">
-          <div class="form-group">
-            <label class="form-label">Email Address</label>
-            <input class="form-input" type="email" id="login-email" placeholder="you@example.com" required/>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Password</label>
-            <div class="password-wrap">
-              <input class="form-input" type="password" id="login-password" placeholder="Your password" required/>
-              <button type="button" class="password-toggle" onclick="togglePwd('login-password',this)">👁</button>
+        <!-- LOGIN -->
+        <div class="form-section active" id="section-login">
+          <div class="auth-title">Welcome back!</div>
+          <div class="auth-subtitle">Sign in to your CareSync account</div>
+          <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input class="form-input" type="email" id="login-email" placeholder="you@example.com" required/>
             </div>
-          </div>
-          <button class="btn btn-primary btn-full btn-lg" type="submit" id="login-btn">
-            Sign In
-          </button>
-        </form>
-      </div>
-
-      <!-- SIGNUP -->
-      <div class="form-section" id="section-signup">
-        <div class="auth-title">Create your account</div>
-        <div class="auth-subtitle">Join thousands of patients & doctors</div>
-        <form id="signup-form" onsubmit="handleSignup(event)">
-          <div class="form-group">
-            <label class="form-label">Email Address</label>
-            <input class="form-input" type="email" id="signup-email" placeholder="you@example.com" required/>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Password</label>
-            <div class="password-wrap">
-              <input class="form-input" type="password" id="signup-password" placeholder="Min. 8 characters" required minlength="6"/>
-              <button type="button" class="password-toggle" onclick="togglePwd('signup-password',this)">👁</button>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <div class="password-wrap">
+                <input class="form-input" type="password" id="login-password" placeholder="Your password" required/>
+                <button type="button" class="password-toggle" onclick="togglePwd('login-password',this)">👁</button>
+              </div>
             </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Confirm Password</label>
-            <div class="password-wrap">
-              <input class="form-input" type="password" id="signup-confirm" placeholder="Repeat password" required/>
-              <button type="button" class="password-toggle" onclick="togglePwd('signup-confirm',this)">👁</button>
-            </div>
-          </div>
-          <button class="btn btn-primary btn-full btn-lg" type="submit" id="signup-btn">Create Account</button>
-        </form>
-      </div>
+            <button class="btn btn-primary btn-full btn-lg" type="submit" id="login-btn">
+              Sign In
+            </button>
+          </form>
+        </div>
 
-      <p style="text-align:center;margin-top:20px;font-size:13px;color:rgba(255,255,255,0.35);">Protected by 256-bit SSL encryption 🔒</p>
+        <!-- SIGNUP -->
+        <div class="form-section" id="section-signup">
+          <div class="auth-title">Create your account</div>
+          <div class="auth-subtitle">Join thousands of patients & doctors</div>
+          <form id="signup-form" onsubmit="handleSignup(event)">
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input class="form-input" type="email" id="signup-email" placeholder="you@example.com" required/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <div class="password-wrap">
+                <input class="form-input" type="password" id="signup-password" placeholder="Min. 8 characters" required minlength="6"/>
+                <button type="button" class="password-toggle" onclick="togglePwd('signup-password',this)">👁</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm Password</label>
+              <div class="password-wrap">
+                <input class="form-input" type="password" id="signup-confirm" placeholder="Repeat password" required/>
+                <button type="button" class="password-toggle" onclick="togglePwd('signup-confirm',this)">👁</button>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-full btn-lg" type="submit" id="signup-btn">Create Account</button>
+          </form>
+        </div>
+
+        <p style="text-align:center;margin-top:20px;font-size:13px;color:rgba(255,255,255,0.35);">Protected by 256-bit SSL encryption 🔒</p>
+      </div>
     </div>
   </div>
 </div>

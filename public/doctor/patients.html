@@ -151,12 +151,12 @@ async function showPatient(id) {
     document.getElementById('page-sub').textContent = p.email || '';
 
     document.getElementById('patient-info-body').innerHTML = `
-      <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px;">
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
         <div class="avatar avatar-lg">${(p.name||'?').charAt(0).toUpperCase()}</div>
         <div>
           <div style="font-size:20px;font-weight:800;">${p.name||'—'}</div>
           <div style="font-size:13px;color:var(--text-muted);">${p.email||''}</div>
-          <div class="flex gap-2 mt-2">${p.blood_group?`<span class="badge badge-red">🩸 ${p.blood_group}</span>`:''}${p.gender?`<span class="badge badge-teal">${p.gender}</span>`:''}</div>
+          <div class="flex gap-2 mt-2" style="flex-wrap:wrap;">${p.blood_group?`<span class="badge badge-red">🩸 ${p.blood_group}</span>`:''}${p.gender?`<span class="badge badge-teal">${p.gender}</span>`:''}</div>
         </div>
       </div>
       <div style="display:grid;gap:8px;">
